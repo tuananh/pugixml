@@ -8184,6 +8184,54 @@ PUGI__NS_BEGIN
 		return (value >= -0.5 && value <= 0) ? ceil(value) : floor(value + 0.5);
 	}
 
+	PUGI__FN char_t* to_titlecase(char_t* buffer)
+	{
+		char_t* write = buffer;
+
+		for (char_t* it = buffer; *it; )
+		{
+			char_t ch = *it++;
+			*write++ = ::tolower(ch);
+		}
+
+		// zero-terminate
+		*write = 0;
+
+		return write;
+	}
+
+	PUGI__FN char_t* to_lowercase(char_t* buffer)
+	{
+		char_t* write = buffer;
+
+		for (char_t* it = buffer; *it; )
+		{
+			char_t ch = *it++;
+			*write++ = ::tolower(ch);
+		}
+
+		// zero-terminate
+		*write = 0;
+
+		return write;
+	}
+
+	PUGI__FN char_t* to_uppercase(char_t* buffer)
+	{
+		char_t* write = buffer;
+
+		for (char_t* it = buffer; *it; )
+		{
+			char_t ch = *it++;
+			*write++ = ::toupper(ch);
+		}
+
+		// zero-terminate
+		*write = 0;
+
+		return write;
+	}
+
 	PUGI__FN const char_t* qualified_name(const xpath_node& node)
 	{
 		return node.attribute() ? node.attribute().name() : node.node().name();
@@ -9171,6 +9219,9 @@ PUGI__NS_BEGIN
 		ast_func_floor,					// floor(left)
 		ast_func_ceiling,				// ceiling(left)
 		ast_func_round,					// round(left)
+		ast_func_title_case,			// title-case(left)
+		ast_func_lower_case,			// lower-case(left)
+		ast_func_upper_case,			// upper-case(left)
 		ast_step,						// process set left with step
 		ast_step_root,					// select root node
 
@@ -10562,6 +10613,42 @@ PUGI__NS_BEGIN
 					return xpath_string::from_const(_data.variable->get_string());
 			}
 
+			case ast_func_title_case:
+			{
+				xpath_string s = _left->eval_string(c, stack);
+
+				char_t* begin = s.data(stack.result);
+				if (!begin) return xpath_string();
+
+				char_t* end = to_titlecase(begin);
+
+				return xpath_string::from_heap_preallocated(begin, end);
+			}
+
+			case ast_func_lower_case:
+			{
+				xpath_string s = _left->eval_string(c, stack);
+
+				char_t* begin = s.data(stack.result);
+				if (!begin) return xpath_string();
+
+				char_t* end = to_lowercase(begin);
+
+				return xpath_string::from_heap_preallocated(begin, end);
+			}
+
+			case ast_func_upper_case:
+			{
+				xpath_string s = _left->eval_string(c, stack);
+
+				char_t* begin = s.data(stack.result);
+				if (!begin) return xpath_string();
+
+				char_t* end = to_uppercase(begin);
+
+				return xpath_string::from_heap_preallocated(begin, end);
+			}
+
 			// fallthrough
 			default:
 			{
@@ -10978,6 +11065,10 @@ PUGI__NS_BEGIN
 					if (argc == 1 && args[0]->rettype() != xpath_type_node_set) return error("Function has to be applied to node set");
 					return alloc_node(argc == 0 ? ast_func_local_name_0 : ast_func_local_name_1, xpath_type_string, args[0]);
 				}
+				else if (name == PUGIXML_TEXT("lower-case") && argc == 1)
+				{
+					return alloc_node(ast_func_lower_case, xpath_type_string, args[0]);
+				}
 
 				break;
 
@@ -11039,6 +11130,15 @@ PUGI__NS_BEGIN
 					return alloc_node(ast_func_translate, xpath_type_string, args[0], args[1]);
 				else if (name == PUGIXML_TEXT("true") && argc == 0)
 					return alloc_node(ast_func_true, xpath_type_boolean);
+				else if (name == PUGIXML_TEXT("title-case") && argc == 1)
+				{
+					return alloc_node(ast_func_title_case, xpath_type_string, args[0]);
+				}
+			case 'u':
+				if (name == PUGIXML_TEXT("upper-case") && argc == 1)
+				{
+					return alloc_node(ast_func_upper_case, xpath_type_string, args[0]);
+				}
 
 				break;
 

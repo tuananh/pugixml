@@ -8187,12 +8187,21 @@ PUGI__NS_BEGIN
 	PUGI__FN char_t* to_titlecase(char_t* buffer)
 	{
 		char_t* write = buffer;
+		static char_t last = ' ';
 
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			*write++ = ::tolower(ch);
+			if (!::isalpha(last) && ::isalpha(ch))
+			{
+				*write++ = ::toupper(ch);
+			}
+			else *write++ = ::tolower(ch);
+
+			last = ch;
 		}
+
+		last = ' ';
 
 		// zero-terminate
 		*write = 0;

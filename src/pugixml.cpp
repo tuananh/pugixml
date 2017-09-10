@@ -8280,6 +8280,7 @@ PUGI__NS_BEGIN
 			if (::isalpha(ch))
 			{
 				*write++ = ::tolower(ch);
+				shouldReplace = false;
 			} else if (ch == ' ') {
 				shouldReplace = true;
 				*write++ = '_';

@@ -8241,6 +8241,58 @@ PUGI__NS_BEGIN
 		return write;
 	}
 
+	PUGI__FN char_t* to_camelcase(char_t* buffer)
+	{
+		char_t* write = buffer;
+		static bool shouldUpper = false;
+
+		for (char_t* it = buffer; *it; )
+		{
+			char_t ch = *it++;
+			if (::isalpha(ch))
+			{
+				if (shouldUpper) {
+					*write++ = ::toupper(ch);
+					shouldUpper = false;
+				} else {
+					*write++ = ::tolower(ch);
+				}
+
+			} else if (ch == ' ') {
+				shouldUpper = true;
+			}
+		}
+
+		// zero-terminate
+		*write = 0;
+
+		return write;
+	}
+
+	PUGI__FN char_t* to_snakecase(char_t* buffer)
+	{
+		char_t* write = buffer;
+		static bool shouldReplace = false;
+
+		for (char_t* it = buffer; *it; )
+		{
+			char_t ch = *it++;
+			if (::isalpha(ch))
+			{
+				*write++ = ::tolower(ch);
+				shouldReplace = false;
+			} else if (ch == ' ') {
+				shouldReplace = true;
+				*write++ = '_';
+			}
+		}
+
+		// zero-terminate
+		*write = 0;
+
+		return write;
+	}
+
 	PUGI__FN const char_t* qualified_name(const xpath_node& node)
 	{
 		return node.attribute() ? node.attribute().name() : node.node().name();
@@ -9231,6 +9283,8 @@ PUGI__NS_BEGIN
 		ast_func_title_case,			// title-case(left)
 		ast_func_lower_case,			// lower-case(left)
 		ast_func_upper_case,			// upper-case(left)
+		ast_func_camel_case,			// camel-case(left)
+		ast_func_snake_case,			// snake-case(left)
 		ast_step,						// process set left with step
 		ast_step_root,					// select root node
 
@@ -10658,6 +10712,30 @@ PUGI__NS_BEGIN
 				return xpath_string::from_heap_preallocated(begin, end);
 			}
 
+			case ast_func_camel_case:
+			{
+				xpath_string s = _left->eval_string(c, stack);
+
+				char_t* begin = s.data(stack.result);
+				if (!begin) return xpath_string();
+
+				char_t* end = to_camelcase(begin);
+
+				return xpath_string::from_heap_preallocated(begin, end);
+			}
+
+			case ast_func_snake_case:
+			{
+				xpath_string s = _left->eval_string(c, stack);
+
+				char_t* begin = s.data(stack.result);
+				if (!begin) return xpath_string();
+
+				char_t* end = to_snakecase(begin);
+
+				return xpath_string::from_heap_preallocated(begin, end);
+			}
+
 			// fallthrough
 			default:
 			{
@@ -11047,7 +11125,8 @@ PUGI__NS_BEGIN
 					return alloc_node(ast_func_concat, xpath_type_string, args[0], args[1]);
 				else if (name == PUGIXML_TEXT("ceiling") && argc == 1)
 					return alloc_node(ast_func_ceiling, xpath_type_number, args[0]);
-
+				else if (name == PUGIXML_TEXT("camel-case") && argc == 1)
+					return alloc_node(ast_func_camel_case, xpath_type_string, args[0]);
 				break;
 
 			case 'f':
@@ -11075,9 +11154,7 @@ PUGI__NS_BEGIN
 					return alloc_node(argc == 0 ? ast_func_local_name_0 : ast_func_local_name_1, xpath_type_string, args[0]);
 				}
 				else if (name == PUGIXML_TEXT("lower-case") && argc == 1)
-				{
 					return alloc_node(ast_func_lower_case, xpath_type_string, args[0]);
-				}
 
 				break;
 
@@ -11131,6 +11208,8 @@ PUGI__NS_BEGIN
 					if (args[0]->rettype() != xpath_type_node_set) return error("Function has to be applied to node set");
 					return alloc_node(ast_func_sum, xpath_type_number, args[0]);
 				}
+				else if (name == PUGIXML_TEXT("snake-case") && argc == 1)
+					return alloc_node(ast_func_snake_case, xpath_type_string, args[0]);
 
 				break;
 
@@ -11140,14 +11219,12 @@ PUGI__NS_BEGIN
 				else if (name == PUGIXML_TEXT("true") && argc == 0)
 					return alloc_node(ast_func_true, xpath_type_boolean);
 				else if (name == PUGIXML_TEXT("title-case") && argc == 1)
-				{
 					return alloc_node(ast_func_title_case, xpath_type_string, args[0]);
-				}
+				break;
+
 			case 'u':
 				if (name == PUGIXML_TEXT("upper-case") && argc == 1)
-				{
 					return alloc_node(ast_func_upper_case, xpath_type_string, args[0]);
-				}
 
 				break;
 

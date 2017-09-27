@@ -8192,7 +8192,7 @@ PUGI__NS_BEGIN
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			if (!::isalpha(last) && ::isalpha(ch))
+			if (last == ' ' && ::isalpha(ch))
 			{
 				*write++ = ::toupper(ch);
 			}

@@ -22,6 +22,9 @@
 #include <assert.h>
 #include <limits.h>
 
+#include <algorithm>
+#include <iterator>
+
 #ifdef PUGIXML_WCHAR_MODE
 #	include <wchar.h>
 #endif
@@ -8188,11 +8191,13 @@ PUGI__NS_BEGIN
 	{
 		char_t* write = buffer;
 		static char_t last = ' ';
+		static char_t symbols[] = {'!', '@', '#', '$', '%', '^', '&', '*', '/', '\\', '<', '>', ',', ';' , '{', '}', '|', '[', ']', '-', '_', '+', '=', ' '};
 
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			if (last == ' ' && ::isalpha(ch))
+			bool upper_maybe = std::find(std::begin(symbols), std::end(symbols), last) != std::end(symbols);
+			if (::isalpha(ch) && upper_maybe)
 			{
 				*write++ = ::toupper(ch);
 			}

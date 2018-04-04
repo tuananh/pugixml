@@ -1,5 +1,5 @@
 /**
- * pugixml parser - version 1.8
+ * pugixml parser - version 1.9
  * --------------------------------------------------------
  * Copyright (C) 2006-2018, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
  * Report bugs and download new versions at http://pugixml.org/
@@ -109,8 +109,8 @@
 #	define PUGI__DMC_VOLATILE
 #endif
 
-// Integer sanitizer workaround
-#ifdef __has_attribute
+// Integer sanitizer workaround; we only apply this for clang since gcc8 has no_sanitize but not unsigned-integer-overflow and produces "attribute directive ignored" warnings
+#if defined(__clang__) && defined(__has_attribute)
 #	if __has_attribute(no_sanitize)
 #		define PUGI__UNSIGNED_OVERFLOW __attribute__((no_sanitize("unsigned-integer-overflow")))
 #	else
@@ -4426,6 +4426,7 @@ PUGI__NS_BEGIN
 
 		while (sit && sit != sn)
 		{
+			// when a tree is copied into one of the descendants, we need to skip that subtree to avoid an infinite loop
 			if (sit != dn)
 			{
 				xml_node_struct* copy = append_new_node(dit, alloc, PUGI__NODETYPE(sit));

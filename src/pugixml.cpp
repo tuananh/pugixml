@@ -2712,7 +2712,7 @@ PUGI__NS_BEGIN
 	{
 		PUGI__STATIC_ASSERT(parse_escapes == 0x10 && parse_eol == 0x20 && parse_trim_pcdata == 0x0800);
 
-		switch (((optmask >> 4) & 3) | ((optmask >> 9) & 4)) // get bitmask for flags (eol escapes trim)
+		switch (((optmask >> 4) & 3) | ((optmask >> 9) & 4)) // get bitmask for flags (trim eol escapes); this simultaneously checks 3 options from assertion above
 		{
 		case 0: return strconv_pcdata_impl<opt_false, opt_false, opt_false>::parse;
 		case 1: return strconv_pcdata_impl<opt_false, opt_false, opt_true>::parse;
@@ -2881,7 +2881,7 @@ PUGI__NS_BEGIN
 	{
 		PUGI__STATIC_ASSERT(parse_escapes == 0x10 && parse_eol == 0x20 && parse_wconv_attribute == 0x40 && parse_wnorm_attribute == 0x80);
 
-		switch ((optmask >> 4) & 15) // get bitmask for flags (wconv wnorm eol escapes)
+		switch ((optmask >> 4) & 15) // get bitmask for flags (wnorm wconv eol escapes); this simultaneously checks 4 options from assertion above
 		{
 		case 0:  return strconv_attribute_impl<opt_false>::parse_simple;
 		case 1:  return strconv_attribute_impl<opt_true>::parse_simple;

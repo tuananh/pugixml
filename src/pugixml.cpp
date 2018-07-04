@@ -9431,6 +9431,8 @@ PUGI__NS_BEGIN
 		ast_func_upper_case,			// upper-case(left)
 		ast_func_camel_case,			// camel-case(left)
 		ast_func_snake_case,			// snake-case(left)
+		ast_func_string_join_1,			// string-join(left)
+		ast_func_string_join_2,			// string-join(left, right)
 		ast_step,						// process set left with step
 		ast_step_root,					// select root node
 
@@ -10875,6 +10877,39 @@ PUGI__NS_BEGIN
 				return xpath_string::from_heap_preallocated(begin, end);
 			}
 
+			case ast_func_string_join_1:
+			{
+				xpath_allocator_capture cr(stack.result);
+				std::string out = "";
+
+				xpath_node_set_raw ns = _left->eval_node_set(c, stack, nodeset_eval_all);
+				for (const xpath_node* it = ns.begin(); it != ns.end(); ++it)
+				{
+					xpath_allocator_capture cri(stack.result);
+					out.append(string_value(*it, stack.result).c_str());
+				}
+				return xpath_string::from_const(out.c_str());
+			}
+
+			case ast_func_string_join_2:
+			{
+				xpath_allocator_capture cr(stack.result);
+				std::string out = "";
+
+				xpath_node_set_raw ns = _left->eval_node_set(c, stack, nodeset_eval_all);
+				xpath_string delimeter = _right->eval_string(c, stack);
+				for (const xpath_node* it = ns.begin(); it != ns.end();)
+				{
+					xpath_allocator_capture cri(stack.result);
+					out.append(string_value(*it, stack.result).c_str());
+					if (++it != ns.end()) {
+						out.append(delimeter.c_str());
+					}
+				}
+
+				return xpath_string::from_const(out.c_str());
+			}
+
 			// fallthrough
 			default:
 			{
@@ -11349,7 +11384,10 @@ PUGI__NS_BEGIN
 				}
 				else if (name == PUGIXML_TEXT("snake-case") && argc == 1)
 					return alloc_node(ast_func_snake_case, xpath_type_string, args[0]);
-
+				else if (name == PUGIXML_TEXT("string-join") && argc == 1)
+					return alloc_node(ast_func_string_join_1, xpath_type_string, args[0]);
+				else if (name == PUGIXML_TEXT("string-join") && argc == 2)
+					return alloc_node(ast_func_string_join_2, xpath_type_string, args[0], args[1]);
 				break;
 
 			case 't':

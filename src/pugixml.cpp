@@ -9507,7 +9507,9 @@ PUGI__NS_BEGIN
 		ast_func_camel_case,			// camel-case(left)
 		ast_func_snake_case,			// snake-case(left)
 		ast_func_string_join_1,			// string-join(left)
-		ast_func_string_join_2,			// string-join(left, right)
+		ast_func_string_join_2,			// string-join(left, right),
+		ast_func_raw_0,					// raw()
+		ast_func_raw_1,					// raw(left)
 		ast_step,						// process set left with step
 		ast_step_root,					// select root node
 
@@ -10986,6 +10988,82 @@ PUGI__NS_BEGIN
 				return xpath_string::from_const(out.c_str());
 			}
 
+			case ast_func_raw_0:
+			{
+				printf("ast_func_raw_0");
+				struct xml_string_writer: pugi::xml_writer
+				{
+					std::string result;
+					virtual void write(const void* data, size_t size)
+					{
+						result.append(static_cast<const char*>(data), size);
+					}
+				};
+
+				xpath_node na = c.n;
+				xml_node n = na.node();
+				printf("ast_func_raw_0, node type = %d", n.type());
+				switch (n.type())
+				{
+					case node_pcdata:
+					case node_cdata:
+					case node_comment:
+					case node_pi:
+						return xpath_string::from_const(n.value());
+
+					case node_document:
+					case node_element:
+					{
+						xml_string_writer writer;
+						n.print(writer);
+						printf("writer.result.c_str() %s", writer.result.c_str());
+						return xpath_string::from_heap(writer.result.c_str(), writer.result.c_str() + writer.result.size(), stack.result);
+					}
+
+					default:
+						return xpath_string();
+				}
+			}
+
+			case ast_func_raw_1:
+			{
+				printf("ast_func_raw_1");
+				struct xml_string_writer : pugi::xml_writer
+				{
+					std::string result;
+					virtual void write(const void *data, size_t size)
+					{
+						result.append(static_cast<const char *>(data), size);
+					}
+				};
+
+				xpath_allocator_capture cr(stack.result);
+				xpath_node_set_raw ns = _left->eval_node_set(c, stack, nodeset_eval_first);
+				xpath_node na = ns.first();
+				xml_node n = na.node();
+
+				switch (n.type())
+				{
+					case node_pcdata:
+					case node_cdata:
+					case node_comment:
+					case node_pi:
+						return xpath_string::from_const(n.value());
+
+					case node_document:
+					case node_element:
+					{
+						xml_string_writer writer;
+						n.print(writer);
+						printf("writer.result.c_str() %s", writer.result.c_str());
+						return xpath_string::from_heap(writer.result.c_str(), writer.result.c_str() + writer.result.size(), stack.result);
+					}
+
+					default:
+						return xpath_string();
+				}
+			}
+
 			// fallthrough
 			default:
 			{
@@ -11443,6 +11521,10 @@ PUGI__NS_BEGIN
 			case 'r':
 				if (name == PUGIXML_TEXT("round") && argc == 1)
 					return alloc_node(ast_func_round, xpath_type_number, args[0]);
+				if (name == PUGIXML_TEXT("raw") && argc <= 1)
+				{
+					return alloc_node(argc == 0 ? ast_func_raw_0 : ast_func_raw_1, xpath_type_string, args[0]);
+				}
 
 				break;
 

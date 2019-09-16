@@ -10990,7 +10990,6 @@ PUGI__NS_BEGIN
 
 			case ast_func_raw_0:
 			{
-				printf("ast_func_raw_0");
 				struct xml_string_writer: pugi::xml_writer
 				{
 					std::string result;
@@ -11002,7 +11001,6 @@ PUGI__NS_BEGIN
 
 				xpath_node na = c.n;
 				xml_node n = na.node();
-				printf("ast_func_raw_0, node type = %d", n.type());
 				switch (n.type())
 				{
 					case node_pcdata:
@@ -11016,7 +11014,6 @@ PUGI__NS_BEGIN
 					{
 						xml_string_writer writer;
 						n.print(writer);
-						printf("writer.result.c_str() %s", writer.result.c_str());
 						return xpath_string::from_heap(writer.result.c_str(), writer.result.c_str() + writer.result.size(), stack.result);
 					}
 
@@ -11027,7 +11024,6 @@ PUGI__NS_BEGIN
 
 			case ast_func_raw_1:
 			{
-				printf("ast_func_raw_1");
 				struct xml_string_writer : pugi::xml_writer
 				{
 					std::string result;
@@ -11055,7 +11051,6 @@ PUGI__NS_BEGIN
 					{
 						xml_string_writer writer;
 						n.print(writer);
-						printf("writer.result.c_str() %s", writer.result.c_str());
 						return xpath_string::from_heap(writer.result.c_str(), writer.result.c_str() + writer.result.size(), stack.result);
 					}
 

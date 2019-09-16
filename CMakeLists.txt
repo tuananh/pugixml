@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 
-project(pugixml VERSION 1.9)
+project(pugixml VERSION 1.10)
 
 option(BUILD_SHARED_AND_STATIC_LIBS "Build both shared and static libraries" OFF)
 option(BUILD_SHARED_LIBS "Build shared instead of static library" OFF)
@@ -81,7 +81,7 @@ foreach(TARGET ${LIBRARY})
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
 		$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}${INSTALL_SUFFIX}>)
 
-	if(USE_POSTFIX AND CMAKE_CONFIGURATION_TYPES)
+	if(USE_POSTFIX)
 		set_target_properties(${TARGET} PROPERTIES DEBUG_POSTFIX "_d" MINSIZEREL_POSTFIX "_m" RELWITHDEBINFO_POSTFIX "_r")
 	endif()
 endforeach()
@@ -108,5 +108,5 @@ if(BUILD_TESTS)
 	else()
 		target_link_libraries(check pugixml)
 	endif()
-	add_custom_command(TARGET check POST_BUILD COMMAND check WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+	add_custom_command(TARGET check POST_BUILD COMMAND check WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

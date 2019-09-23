@@ -79,6 +79,9 @@ build/pugixml-%: .FORCE | $(RELEASE)
 	@mkdir -p $(BUILD)
 	TIMESTAMP=`git show v$(VERSION) -s --format=%ct` && python scripts/archive.py $@ pugixml-$(VERSION) $$TIMESTAMP $|
 
+cppcheck:
+	cppcheck src --force --error-exitcode=1
+
 $(EXECUTABLE): $(OBJECTS)
 	$(CXX) $(OBJECTS) $(LDFLAGS) -o $@
 

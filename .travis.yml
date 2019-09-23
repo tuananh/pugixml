@@ -6,6 +6,10 @@ compiler:
   - clang
   - gcc
 
+install:
+  - sudo apt update -qq
+  - sudo apt-get install -qq cppcheck
+
 matrix:
   exclude:
     - os: osx
@@ -22,6 +26,7 @@ script:
   - if [[ "$CXX" == "clang++" ]]; then make test cxxstd=c++11 defines=$DEFINES config=sanitize -j2; fi
   - make test cxxstd=c++11 defines=$DEFINES config=release -j2
   - make test cxxstd=c++98 defines=$DEFINES config=debug -j2
+  - make cppcheck
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -f pugixml.cpp.gcov

@@ -8,7 +8,7 @@ version: "{branch}-{build}"
 # install cppcheck
 install:
   - ps: 'Start-FileDownload "https://github.com/danmar/cppcheck/releases/download/1.89/cppcheck-1.89-x64-Setup.msi" -FileName "cppcheck-1.89-x64-Setup.msi"'
-  - 'cppcheck-1.89-x64-Setup.msi --quiet-mode'
+  - 'cppcheck-1.89-x64-Setup.msi'
 
 build_script:
   - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2013") { .\scripts\nuget_build.ps1 2013}

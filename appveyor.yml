@@ -5,6 +5,11 @@ image:
 
 version: "{branch}-{build}"
 
+# install cppcheck
+install:
+  - ps: 'Start-FileDownload "https://github.com/danmar/cppcheck/releases/download/1.89/cppcheck-1.89-x64-Setup.msi" -FileName "cppcheck-1.89-x64-Setup.msi"'
+  - 'cppcheck-1.89-x64-Setup.msi --quiet-mode'
+
 build_script:
   - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2013") { .\scripts\nuget_build.ps1 2013}
   - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2015") { .\scripts\nuget_build.ps1 2015}
@@ -17,6 +22,7 @@ test_script:
   - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2019") { .\tests\autotest-appveyor.ps1 19 }
   - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2015") { & C:\cygwin\bin\bash.exe -c "PATH=/usr/bin:/usr/local/bin:$PATH; make config=coverage test && bash <(curl -s https://codecov.io/bash) -f pugixml.cpp.gcov" }
   - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2015") { & C:\cygwin\bin\bash.exe -c "PATH=/usr/bin:/usr/local/bin:$PATH; make config=coverage defines=PUGIXML_WCHAR_MODE test && bash <(curl -s https://codecov.io/bash) -f pugixml.cpp.gcov" }
+  - ps: if ($env:APPVEYOR_BUILD_WORKER_IMAGE -eq "Visual Studio 2015") { & C:\cygwin\bin\bash.exe -c "PATH=/usr/bin:/usr/local/bin:$PATH; make cppcheck" }
 
 artifacts:
   - path: .\scripts\*.nupkg

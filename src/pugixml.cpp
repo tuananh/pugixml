@@ -8533,7 +8533,6 @@ PUGI__NS_BEGIN
 	PUGI__FN char_t* to_snakecase(char_t* buffer)
 	{
 		char_t* write = buffer;
-		static bool shouldReplace = false;
 
 		for (char_t* it = buffer; *it; )
 		{
@@ -8541,9 +8540,7 @@ PUGI__NS_BEGIN
 			if (::isalpha(ch))
 			{
 				*write++ = ::tolower(ch);
-				shouldReplace = false;
 			} else if (ch == ' ') {
-				shouldReplace = true;
 				*write++ = '_';
 			}
 		}
@@ -11138,6 +11135,29 @@ PUGI__NS_BEGIN
 			}
 
 			// fallthrough
+			default:
+				;
+			}
+
+			// none of the ast types that return the value directly matched, we need to perform type conversion
+			switch (_rettype)
+			{
+			case xpath_type_boolean:
+				return xpath_string::from_const(eval_boolean(c, stack) ? PUGIXML_TEXT("true") : PUGIXML_TEXT("false"));
+
+			case xpath_type_number:
+				return convert_number_to_string(eval_number(c, stack), stack.result);
+
+			case xpath_type_node_set:
+			{
+				xpath_allocator_capture cr(stack.temp);
+
+				xpath_stack swapped_stack = {stack.temp, stack.result};
+
+				xpath_node_set_raw ns = eval_node_set(c, swapped_stack, nodeset_eval_first);
+				return ns.empty() ? xpath_string() : string_value(ns.first(), stack.result);
+			}
+
 			default:
 				;
 			}

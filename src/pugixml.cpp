@@ -8452,7 +8452,7 @@ PUGI__NS_BEGIN
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			bool upper_maybe = false;			
+			bool upper_maybe = false;
 			for (size_t i = 0; i < size; i += 1) {
 				if (symbols[i] == last) {
 					upper_maybe = true;
@@ -11039,30 +11039,34 @@ PUGI__NS_BEGIN
 			case ast_func_string_join_1:
 			{
 				xpath_allocator_capture cr(stack.result);
-				std::string out = "";
+				xpath_string out;
 
 				xpath_node_set_raw ns = _left->eval_node_set(c, stack, nodeset_eval_all);
 				for (const xpath_node* it = ns.begin(); it != ns.end(); ++it)
 				{
 					xpath_allocator_capture cri(stack.result);
-					out.append(string_value(*it, stack.result).c_str());
+					xpath_string s = string_value(*it, stack.result);
+					out.append(s, stack.result);
 				}
+
 				return xpath_string::from_const(out.c_str());
 			}
 
 			case ast_func_string_join_2:
 			{
 				xpath_allocator_capture cr(stack.result);
-				std::string out = "";
+				xpath_string out;
 
 				xpath_node_set_raw ns = _left->eval_node_set(c, stack, nodeset_eval_all);
 				xpath_string delimeter = _right->eval_string(c, stack);
 				for (const xpath_node* it = ns.begin(); it != ns.end();)
 				{
 					xpath_allocator_capture cri(stack.result);
-					out.append(string_value(*it, stack.result).c_str());
+					xpath_string s = string_value(*it, stack.result);
+					out.append(s, stack.result);
+
 					if (++it != ns.end()) {
-						out.append(delimeter.c_str());
+						out.append(delimeter, stack.result);
 					}
 				}
 

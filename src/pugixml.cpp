@@ -8448,11 +8448,17 @@ PUGI__NS_BEGIN
 		char_t* write = buffer;
 		static char_t last = ' ';
 		static char_t symbols[] = {'!', '@', '#', '$', '%', '^', '&', '*', '/', '\\', '<', '>', ',', ';' , '{', '}', '|', '[', ']', '-', '_', '+', '=', '(', ')', ' '};
-
+		static size_t size = sizeof(symbols) / sizeof(symbols[0]);
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			bool upper_maybe = std::find(std::begin(symbols), std::end(symbols), last) != std::end(symbols);
+			bool upper_maybe = false;			
+			for (size_t i = 0; i < size; i += 1) {
+				if (symbols[i] == last) {
+					upper_maybe = true;
+					break;
+				}
+			}
 			if (::isalpha(ch) && upper_maybe)
 			{
 				*write++ = ::toupper(ch);

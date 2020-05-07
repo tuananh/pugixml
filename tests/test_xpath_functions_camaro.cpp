@@ -36,4 +36,14 @@ TEST_XML(xpath_function_string_join, "<nodes><node>node 1</node><node>node 2</no
 	CHECK_XPATH_STRING(n, STR("string-join(node)"), STR("node 1node 2"));
 }
 
+TEST_XML(xpath_function_raw, "<nodes><node>1</node><node>2</node></nodes>")
+{
+    // string-join functions with 0 arguments
+    CHECK_XPATH_STRING(doc, STR("raw()"), STR("<nodes>\n\t<node>1</node>\n\t<node>2</node>\n</nodes>\n"));
+
+    // string-join functions with 1 arguments
+	CHECK_XPATH_STRING(doc, STR("raw(nodes)"), STR("<nodes>\n\t<node>1</node>\n\t<node>2</node>\n</nodes>\n"));
+    CHECK_XPATH_STRING(doc, STR("raw(//node)"), STR("<node>1</node>\n"));
+}
+
 #endif

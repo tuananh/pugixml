@@ -8462,9 +8462,9 @@ PUGI__NS_BEGIN
 			}
 			if (::isalpha(ch) && upper_maybe)
 			{
-				*write++ = ::toupper(ch);
+				*write++ = static_cast<char_t>(::toupper(ch));
 			}
-			else *write++ = ::tolower(ch);
+			else *write++ = static_cast<char_t>(::tolower(ch));
 
 			last = ch;
 		}
@@ -8484,7 +8484,7 @@ PUGI__NS_BEGIN
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			*write++ = ::tolower(ch);
+			*write++ = static_cast<char_t>(::tolower(ch));
 		}
 
 		// zero-terminate
@@ -8500,7 +8500,7 @@ PUGI__NS_BEGIN
 		for (char_t* it = buffer; *it; )
 		{
 			char_t ch = *it++;
-			*write++ = ::toupper(ch);
+			*write++ = static_cast<char_t>(::toupper(ch));
 		}
 
 		// zero-terminate
@@ -8520,10 +8520,10 @@ PUGI__NS_BEGIN
 			if (::isalpha(ch))
 			{
 				if (shouldUpper) {
-					*write++ = ::toupper(ch);
+					*write++ = static_cast<char_t>(::toupper(ch));
 					shouldUpper = false;
 				} else {
-					*write++ = ::tolower(ch);
+					*write++ = static_cast<char_t>(::tolower(ch));
 				}
 
 			} else if (ch == ' ') {
@@ -8546,7 +8546,7 @@ PUGI__NS_BEGIN
 			char_t ch = *it++;
 			if (::isalpha(ch))
 			{
-				*write++ = ::tolower(ch);
+				*write++ = static_cast<char_t>(::tolower(ch));
 			} else if (ch == ' ') {
 				*write++ = '_';
 			}

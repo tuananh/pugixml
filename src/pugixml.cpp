@@ -37,6 +37,7 @@
 #ifndef PUGIXML_NO_STL
 #	include <istream>
 #	include <ostream>
+#	include <sstream>
 #	include <string>
 #endif
 
@@ -11075,15 +11076,6 @@ PUGI__NS_BEGIN
 
 			case ast_func_raw_0:
 			{
-				struct xml_string_writer: pugi::xml_writer
-				{
-					std::string result;
-					virtual void write(const void* data, size_t size)
-					{
-						result.append(static_cast<const char*>(data), size);
-					}
-				};
-
 				xpath_node na = c.n;
 				xml_node n = na.node();
 				switch (n.type())
@@ -11097,9 +11089,17 @@ PUGI__NS_BEGIN
 					case node_document:
 					case node_element:
 					{
-						xml_string_writer writer;
-						n.print(writer);
-						return xpath_string::from_heap(writer.result.c_str(), writer.result.c_str() + writer.result.size(), stack.result);
+						#ifndef PUGIXML_WCHAR_MODE
+							std::stringstream ss;
+							n.print(ss);
+							std::string str = ss.str();
+							return xpath_string::from_heap(str.c_str(), str.c_str() + str.size(), stack.result);
+						#else
+							std::wstringstream ss;
+							n.print(ss);
+							std::wstring str = ss.str();
+							return xpath_string::from_heap(str.c_str(), str.c_str() + str.size(), stack.result);
+						#endif
 					}
 
 					default:
@@ -11109,15 +11109,6 @@ PUGI__NS_BEGIN
 
 			case ast_func_raw_1:
 			{
-				struct xml_string_writer : pugi::xml_writer
-				{
-					std::string result;
-					virtual void write(const void *data, size_t size)
-					{
-						result.append(static_cast<const char *>(data), size);
-					}
-				};
-
 				xpath_allocator_capture cr(stack.result);
 				xpath_node_set_raw ns = _left->eval_node_set(c, stack, nodeset_eval_first);
 				xpath_node na = ns.first();
@@ -11134,9 +11125,17 @@ PUGI__NS_BEGIN
 					case node_document:
 					case node_element:
 					{
-						xml_string_writer writer;
-						n.print(writer);
-						return xpath_string::from_heap(writer.result.c_str(), writer.result.c_str() + writer.result.size(), stack.result);
+						#ifndef PUGIXML_WCHAR_MODE
+							std::stringstream ss;
+							n.print(ss);
+							std::string str = ss.str();
+							return xpath_string::from_heap(str.c_str(), str.c_str() + str.size(), stack.result);
+						#else
+							std::wstringstream ss;
+							n.print(ss);
+							std::wstring str = ss.str();
+							return xpath_string::from_heap(str.c_str(), str.c_str() + str.size(), stack.result);
+						#endif
 					}
 
 					default:

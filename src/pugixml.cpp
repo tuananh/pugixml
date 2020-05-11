@@ -11050,7 +11050,7 @@ PUGI__NS_BEGIN
 					out.append(s, stack.result);
 				}
 
-				return xpath_string::from_const(out.c_str());
+				return out;
 			}
 
 			case ast_func_string_join_2:
@@ -11071,7 +11071,7 @@ PUGI__NS_BEGIN
 					}
 				}
 
-				return xpath_string::from_const(out.c_str());
+				return out;
 			}
 
 			case ast_func_raw_0:

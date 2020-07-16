@@ -100,9 +100,6 @@ if (NOT BUILD_SHARED_LIBS OR BUILD_SHARED_AND_STATIC_LIBS)
   target_include_directories(pugixml-static
     PUBLIC
       $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>)
-  target_compile_definitions(pugixml-static
-    PRIVATE
-      $<$<CXX_COMPILER_ID:MSVC>:PUGIXML_API=__declspec\(dllexport\)>)
   target_compile_options(pugixml-static
     PRIVATE
       ${msvc-rt-mtd-shared}
@@ -144,6 +141,16 @@ configure_package_config_file(
 write_basic_package_version_file(
   "${PROJECT_BINARY_DIR}/pugixml-config-version.cmake"
   COMPATIBILITY SameMajorVersion)
+
+if (USE_POSTFIX)
+  if(CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+    set(LIB_POSTFIX ${CMAKE_RELWITHDEBINFO_POSTFIX})
+  elseif(CMAKE_BUILD_TYPE MATCHES MinSizeRel)
+    set(LIB_POSTFIX ${CMAKE_MINSIZEREL_POSTFIX})
+  elseif(CMAKE_BUILD_TYPE MATCHES Debug)
+    set(LIB_POSTFIX ${CMAKE_DEBUG_POSTFIX})
+  endif()
+endif()
 
 configure_file(scripts/pugixml.pc.in pugixml.pc @ONLY)
 

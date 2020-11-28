@@ -46,7 +46,7 @@ Thanks to *Vyacheslav Egorov* for documentation proofreading and fuzz testing.
 The pugixml library is distributed under the MIT license:
 
 ....
-Copyright (c) 2006-2019 Arseny Kapoulkine
+Copyright (c) 2006-2020 Arseny Kapoulkine
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -74,7 +74,7 @@ This means that you can freely use pugixml in your applications, both open-sourc
 
 ....
 This software is based on pugixml library (https://pugixml.org).
-pugixml is Copyright (C) 2006-2019 Arseny Kapoulkine.
+pugixml is Copyright (C) 2006-2020 Arseny Kapoulkine.
 ....
 
 [[install]]
@@ -2137,6 +2137,24 @@ Because of the differences in document object models, performance considerations
 == Changelog
 
 :!numbered:
+
+[[v1.11]]
+=== v1.11 ^2020-11-26^
+
+Maintenance release. Changes:
+
+* New features:
+	. Add xml_node::remove_attributes and xml_node::remove_children
+	. Add a way to customize floating point precision via xml_attribute::set and xml_text::set overloads
+
+* XPath improvements:
+	. XPath parser now limits recursion depth which prevents stack overflow on malicious queries
+
+* Compatibility improvements:
+	. Fix Visual Studio warnings when built using clang-cl compiler
+	. Fix Wconversion warnings in gcc
+	. Fix Wzero-as-null-pointer-constant warnings in pugixml.hpp
+	. Work around several static analysis false positives
 
 [[v1.10]]
 === v1.10 ^2019-09-15^

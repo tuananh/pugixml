@@ -6739,7 +6739,7 @@ namespace pugi
 		return const_cast<xml_node*>(&_wrap); // BCC5 workaround
 	}
 
-	PUGI__FN const xml_node_iterator& xml_node_iterator::operator++()
+	PUGI__FN xml_node_iterator& xml_node_iterator::operator++()
 	{
 		assert(_wrap._root);
 		_wrap._root = _wrap._root->next_sibling;
@@ -6753,7 +6753,7 @@ namespace pugi
 		return temp;
 	}
 
-	PUGI__FN const xml_node_iterator& xml_node_iterator::operator--()
+	PUGI__FN xml_node_iterator& xml_node_iterator::operator--()
 	{
 		_wrap = _wrap._root ? _wrap.previous_sibling() : _parent.last_child();
 		return *this;
@@ -6800,7 +6800,7 @@ namespace pugi
 		return const_cast<xml_attribute*>(&_wrap); // BCC5 workaround
 	}
 
-	PUGI__FN const xml_attribute_iterator& xml_attribute_iterator::operator++()
+	PUGI__FN xml_attribute_iterator& xml_attribute_iterator::operator++()
 	{
 		assert(_wrap._attr);
 		_wrap._attr = _wrap._attr->next_attribute;
@@ -6814,7 +6814,7 @@ namespace pugi
 		return temp;
 	}
 
-	PUGI__FN const xml_attribute_iterator& xml_attribute_iterator::operator--()
+	PUGI__FN xml_attribute_iterator& xml_attribute_iterator::operator--()
 	{
 		_wrap = _wrap._attr ? _wrap.previous_attribute() : _parent.last_attribute();
 		return *this;
@@ -6861,7 +6861,7 @@ namespace pugi
 		return const_cast<xml_node*>(&_wrap); // BCC5 workaround
 	}
 
-	PUGI__FN const xml_named_node_iterator& xml_named_node_iterator::operator++()
+	PUGI__FN xml_named_node_iterator& xml_named_node_iterator::operator++()
 	{
 		assert(_wrap._root);
 		_wrap = _wrap.next_sibling(_name);
@@ -6875,7 +6875,7 @@ namespace pugi
 		return temp;
 	}
 
-	PUGI__FN const xml_named_node_iterator& xml_named_node_iterator::operator--()
+	PUGI__FN xml_named_node_iterator& xml_named_node_iterator::operator--()
 	{
 		if (_wrap._root)
 			_wrap = _wrap.previous_sibling(_name);

@@ -1,20 +1,18 @@
 /**
- * pugixml parser - version 1.14
+ * pugixml parser - version 1.15
  * --------------------------------------------------------
- * Copyright (C) 2006-2024, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
  * Report bugs and download new versions at https://pugixml.org/
  *
- * This library is distributed under the MIT License. See notice at the end
- * of this file.
+ * SPDX-FileCopyrightText: Copyright (C) 2006-2025, by Arseny Kapoulkine (arseny.kapoulkine@gmail.com)
+ * SPDX-License-Identifier: MIT
  *
- * This work is based on the pugxml parser, which is:
- * Copyright (C) 2003, by Kristen Wegner (kristen@tima.net)
+ * See LICENSE.md or notice at the end of this file.
  */
 
 // Define version macro; evaluates to major * 1000 + minor * 10 + patch so that it's safe to use in less-than comparisons
 // Note: pugixml used major * 100 + minor * 10 + patch format up until 1.9 (which had version identifier 190); starting from pugixml 1.10, the minor version number is two digits
 #ifndef PUGIXML_VERSION
-#	define PUGIXML_VERSION 1140 // 1.14
+#	define PUGIXML_VERSION 1150 // 1.15
 #endif
 
 // Include user configuration file (this can define various configuration macros)
@@ -38,8 +36,8 @@
 #	include <string>
 #endif
 
-// Check if std::string_view is both requested and available
-#if defined(PUGIXML_STRING_VIEW) && !defined(PUGIXML_NO_STL)
+// Check if std::string_view is available
+#if !defined(PUGIXML_HAS_STRING_VIEW) && !defined(PUGIXML_NO_STL)
 #	if __cplusplus >= 201703L
 #		define PUGIXML_HAS_STRING_VIEW
 #	elif defined(_MSVC_LANG) && _MSVC_LANG >= 201703L
@@ -231,7 +229,7 @@ namespace pugi
 	// the document; this flag is only recommended for parsing documents with many PCDATA nodes in memory-constrained environments.
 	// This flag is off by default.
 	const unsigned int parse_embed_pcdata = 0x2000;
-	
+
 	// This flag determines whether determines whether the the two pcdata should be merged or not, if no intermediatory data are parsed in the document.
 	// This flag is off by default.
 	const unsigned int parse_merge_pcdata = 0x4000;
@@ -1560,7 +1558,7 @@ namespace std
 #endif
 
 /**
- * Copyright (c) 2006-2024 Arseny Kapoulkine
+ * Copyright (c) 2006-2025 Arseny Kapoulkine
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation

@@ -39,6 +39,10 @@
 #	include <string>
 #endif
 
+#ifdef PUGIXML_CHARCONV_FLOAT
+#	include <charconv>
+#endif
+
 // For placement new
 #include <new>
 
@@ -256,9 +260,9 @@ PUGI_IMPL_NS_BEGIN
 		assert(src && dst);
 
 	#ifdef PUGIXML_WCHAR_MODE
-		return wcscmp(src, dst) == 0;
+		return *src == *dst && wcscmp(src, dst) == 0;
 	#else
-		return strcmp(src, dst) == 0;
+		return *src == *dst && strcmp(src, dst) == 0;
 	#endif
 	}
 
@@ -2123,6 +2127,7 @@ PUGI_IMPL_NS_BEGIN
 	PUGI_IMPL_FN bool get_mutable_buffer(char_t*& out_buffer, size_t& out_length, const void* contents, size_t size, bool is_mutable)
 	{
 		size_t length = size / sizeof(char_t);
+		assert(contents || length == 0);
 
 		if (is_mutable)
 		{
@@ -2136,8 +2141,6 @@ PUGI_IMPL_NS_BEGIN
 
 			if (contents)
 				memcpy(buffer, contents, length * sizeof(char_t));
-			else
-				assert(length == 0);
 
 			buffer[length] = 0;
 
@@ -4704,6 +4707,15 @@ PUGI_IMPL_NS_BEGIN
 	{
 	#ifdef PUGIXML_WCHAR_MODE
 		return wcstod(value, NULL);
+	#elif defined(PUGIXML_CHARCONV_FLOAT)
+		while (PUGI_IMPL_IS_CHARTYPE(*value, ct_space))
+			value++;
+		if (*value == '+')
+			value++;
+		// return code is intentionally ignored to let libc++/MSVC STL correctly handle underflow/overflow
+		double result = 0.0;
+		std::from_chars(value, value + strlen(value), result);
+		return result;
 	#else
 		return strtod(value, NULL);
 	#endif
@@ -4713,6 +4725,15 @@ PUGI_IMPL_NS_BEGIN
 	{
 	#ifdef PUGIXML_WCHAR_MODE
 		return static_cast<float>(wcstod(value, NULL));
+	#elif defined(PUGIXML_CHARCONV_FLOAT)
+		while (PUGI_IMPL_IS_CHARTYPE(*value, ct_space))
+			value++;
+		if (*value == '+')
+			value++;
+		// return code is intentionally ignored to let libc++/MSVC STL correctly handle underflow/overflow
+		float result = 0.0f;
+		std::from_chars(value, value + strlen(value), result);
+		return result;
 	#else
 		return static_cast<float>(strtod(value, NULL));
 	#endif
@@ -4790,8 +4811,13 @@ PUGI_IMPL_NS_BEGIN
 	PUGI_IMPL_FN bool set_value_convert(String& dest, Header& header, uintptr_t header_mask, float value, int precision)
 	{
 		char buf[128];
+	#ifdef PUGIXML_CHARCONV_FLOAT
+		std::to_chars_result result = std::to_chars(buf, buf + sizeof(buf) - 1, value, std::chars_format::general, precision);
+		if (result.ec != std::errc()) return false;
+		*result.ptr = '\0';
+	#else
 		PUGI_IMPL_SNPRINTF(buf, "%.*g", precision, double(value));
-
+	#endif
 		return set_value_ascii(dest, header, header_mask, buf);
 	}
 
@@ -4799,7 +4825,13 @@ PUGI_IMPL_NS_BEGIN
 	PUGI_IMPL_FN bool set_value_convert(String& dest, Header& header, uintptr_t header_mask, double value, int precision)
 	{
 		char buf[128];
+	#ifdef PUGIXML_CHARCONV_FLOAT
+		std::to_chars_result result = std::to_chars(buf, buf + sizeof(buf) - 1, value, std::chars_format::general, precision);
+		if (result.ec != std::errc()) return false;
+		*result.ptr = '\0';
+	#else
 		PUGI_IMPL_SNPRINTF(buf, "%.*g", precision, value);
+	#endif
 
 		return set_value_ascii(dest, header, header_mask, buf);
 	}
@@ -6790,6 +6822,8 @@ namespace pugi
 
 	PUGI_IMPL_FN xml_node xml_node::first_element_by_path(const char_t* path_, char_t delimiter) const
 	{
+		assert(delimiter != 0);
+
 		xml_node context = path_[0] == delimiter ? root() : *this;
 
 		if (!context._root) return xml_node();
@@ -7743,7 +7777,7 @@ namespace pugi
 		}
 
 		// reset other document
-		new (other) impl::xml_document_struct(PUGI_IMPL_GETPAGE(other));
+		new (other) impl::xml_document_struct(other_page);
 		rhs._buffer = NULL;
 	}
 #endif
@@ -8563,6 +8597,39 @@ PUGI_IMPL_NS_BEGIN
 		return static_cast<unsigned int>(ch - 'A') < 26 ? static_cast<char_t>(ch | ' ') : ch;
 	}
 
+	PUGI_IMPL_FN xpath_string string_value_element(xml_node_struct* n, xpath_allocator* alloc)
+	{
+		xpath_string result;
+
+		// element nodes can have value if parse_embed_pcdata was used
+		if (n->value)
+			result.append(xpath_string::from_const(n->value), alloc);
+
+		xml_node_struct* cur = n->first_child;
+
+		while (cur && cur != n)
+		{
+			xml_node_type type = PUGI_IMPL_NODETYPE(cur);
+
+			if ((type == node_pcdata || type == node_cdata) && cur->value)
+				result.append(xpath_string::from_const(cur->value), alloc);
+
+			if (cur->first_child)
+				cur = cur->first_child;
+			else if (cur->next_sibling)
+				cur = cur->next_sibling;
+			else
+			{
+				while (!cur->next_sibling && cur != n)
+					cur = cur->parent;
+
+				if (cur != n) cur = cur->next_sibling;
+			}
+		}
+
+		return result;
+	}
+
 	PUGI_IMPL_FN xpath_string string_value(const xpath_node& na, xpath_allocator* alloc)
 	{
 		if (na.attribute())
@@ -8581,35 +8648,7 @@ PUGI_IMPL_NS_BEGIN
 
 			case node_document:
 			case node_element:
-			{
-				xpath_string result;
-
-				// element nodes can have value if parse_embed_pcdata was used
-				if (n.value()[0])
-					result.append(xpath_string::from_const(n.value()), alloc);
-
-				xml_node cur = n.first_child();
-
-				while (cur && cur != n)
-				{
-					if (cur.type() == node_pcdata || cur.type() == node_cdata)
-						result.append(xpath_string::from_const(cur.value()), alloc);
-
-					if (cur.first_child())
-						cur = cur.first_child();
-					else if (cur.next_sibling())
-						cur = cur.next_sibling();
-					else
-					{
-						while (!cur.next_sibling() && cur != n)
-							cur = cur.parent();
-
-						if (cur != n) cur = cur.next_sibling();
-					}
-				}
-
-				return result;
-			}
+				return string_value_element(n.internal_object(), alloc);
 
 			default:
 				return xpath_string();
@@ -8866,14 +8905,23 @@ PUGI_IMPL_NS_BEGIN
 #else
 	PUGI_IMPL_FN void convert_number_to_mantissa_exponent(double value, char (&buffer)[32], char** out_mantissa, int* out_exponent)
 	{
+	#ifdef PUGIXML_CHARCONV_FLOAT
+		std::to_chars_result res = std::to_chars(buffer, buffer + sizeof(buffer) - 1, value, std::chars_format::scientific, DBL_DIG);
+		assert(res.ec == std::errc());
+		*res.ptr = '\0';
+	#else
 		// get a scientific notation value with IEEE DBL_DIG decimals
 		PUGI_IMPL_SNPRINTF(buffer, "%.*e", DBL_DIG, value);
-
+	#endif
 		// get the exponent (possibly negative)
 		char* exponent_string = strchr(buffer, 'e');
 		assert(exponent_string);
 
-		int exponent = atoi(exponent_string + 1);
+		char *s = exponent_string + 1;
+		bool isneg = *s++ == '-';
+		int exponent = 0;
+		while (*s) exponent = exponent * 10 + (*s++ - '0');
+		exponent = isneg ? -exponent : exponent;
 
 		// extract mantissa string: skip sign
 		char* mantissa = buffer[0] == '-' ? buffer + 1 : buffer;
@@ -8962,9 +9010,6 @@ PUGI_IMPL_NS_BEGIN
 
 	PUGI_IMPL_FN bool check_string_to_number_format(const char_t* string)
 	{
-		// parse leading whitespace
-		while (PUGI_IMPL_IS_CHARTYPE(*string, ct_space)) ++string;
-
 		// parse sign
 		if (*string == '-') ++string;
 
@@ -8992,12 +9037,20 @@ PUGI_IMPL_NS_BEGIN
 
 	PUGI_IMPL_FN double convert_string_to_number(const char_t* string)
 	{
+		// parse leading whitespace
+		while (PUGI_IMPL_IS_CHARTYPE(*string, ct_space)) ++string;
+
 		// check string format
 		if (!check_string_to_number_format(string)) return gen_nan();
 
 		// parse string
 	#ifdef PUGIXML_WCHAR_MODE
 		return wcstod(string, NULL);
+	#elif defined(PUGIXML_CHARCONV_FLOAT)
+		// return code is intentionally ignored to let libc++/MSVC STL correctly handle underflow/overflow
+		double result = 0.0;
+		std::from_chars(string, string + strlen(string), result);
+		return result;
 	#else
 		return strtod(string, NULL);
 	#endif
@@ -9484,6 +9537,8 @@ PUGI_IMPL_NS_BEGIN
 
 	PUGI_IMPL_FN bool copy_xpath_variable(xpath_variable* lhs, const xpath_variable* rhs)
 	{
+		assert(lhs->type() == rhs->type());
+
 		switch (rhs->type())
 		{
 		case xpath_type_node_set:
@@ -9493,7 +9548,11 @@ PUGI_IMPL_NS_BEGIN
 			return lhs->set(static_cast<const xpath_variable_number*>(rhs)->value);
 
 		case xpath_type_string:
-			return lhs->set(static_cast<const xpath_variable_string*>(rhs)->value);
+		{
+			const char_t* value = static_cast<const xpath_variable_string*>(rhs)->value;
+			assert(!static_cast<xpath_variable_string*>(lhs)->value); // null copy is a no-op
+			return !value || lhs->set(value);
+		}
 
 		case xpath_type_boolean:
 			return lhs->set(static_cast<const xpath_variable_boolean*>(rhs)->value);
@@ -10181,6 +10240,7 @@ PUGI_IMPL_NS_BEGIN
 		ast_step_root,					// select root node
 
 		ast_opt_translate_table,		// translate(left, right, third) where right/third are constants
+		ast_opt_select_attribute,		// @name
 		ast_opt_compare_attribute		// @name = 'string'
 	};
 
@@ -10396,6 +10456,13 @@ PUGI_IMPL_NS_BEGIN
 			}
 			else if (lt != xpath_type_node_set && rt == xpath_type_node_set)
 			{
+				if (rhs->_type == ast_opt_select_attribute)
+				{
+					xml_attribute attr = c.n.node().attribute(rhs->_data.nodetest);
+
+					return attr && comp(lhs->eval_number(c, stack), convert_string_to_number(attr.value()));
+				}
+
 				xpath_allocator_capture cr(stack.result);
 
 				double l = lhs->eval_number(c, stack);
@@ -10413,6 +10480,13 @@ PUGI_IMPL_NS_BEGIN
 			}
 			else if (lt == xpath_type_node_set && rt != xpath_type_node_set)
 			{
+				if (lhs->_type == ast_opt_select_attribute)
+				{
+					xml_attribute attr = c.n.node().attribute(lhs->_data.nodetest);
+
+					return attr && comp(convert_string_to_number(attr.value()), rhs->eval_number(c, stack));
+				}
+
 				xpath_allocator_capture cr(stack.result);
 
 				xpath_node_set_raw ls = lhs->eval_node_set(c, stack, nodeset_eval_all);
@@ -10548,14 +10622,7 @@ PUGI_IMPL_NS_BEGIN
 
 			switch (_test)
 			{
-			case nodetest_name:
-				if (strequal(name, _data.nodetest) && is_xpath_attribute(name))
-				{
-					ns.push_back(xpath_node(xml_attribute(a), xml_node(parent)), alloc);
-					return true;
-				}
-				break;
-
+			// nodetest_name is handled at a higher level
 			case nodetest_type_node:
 			case nodetest_all:
 				if (is_xpath_attribute(name))
@@ -10663,18 +10730,42 @@ PUGI_IMPL_NS_BEGIN
 			{
 			case axis_attribute:
 			{
-				for (xml_attribute_struct* a = n->first_attribute; a; a = a->next_attribute)
-					if (step_push(ns, a, n, alloc) & once)
-						return;
+				if (_test == nodetest_name)
+				{
+					for (xml_attribute_struct* a = n->first_attribute; a; a = a->next_attribute)
+						if (a->name && strequal(a->name, _data.nodetest) && is_xpath_attribute(a->name))
+						{
+							ns.push_back(xpath_node(xml_attribute(a), xml_node(n)), alloc);
+							return; // once=true by construction
+						}
+				}
+				else
+				{
+					for (xml_attribute_struct* a = n->first_attribute; a; a = a->next_attribute)
+						if (step_push(ns, a, n, alloc) & once)
+							return;
+				}
 
 				break;
 			}
 
 			case axis_child:
 			{
-				for (xml_node_struct* c = n->first_child; c; c = c->next_sibling)
-					if (step_push(ns, c, alloc) & once)
-						return;
+				if (_test == nodetest_name)
+				{
+					for (xml_node_struct* c = n->first_child; c; c = c->next_sibling)
+						if (c->name && strequal(c->name, _data.nodetest) && PUGI_IMPL_NODETYPE(c) == node_element)
+						{
+							ns.push_back(xml_node(c), alloc);
+							if (once) return;
+						}
+				}
+				else
+				{
+					for (xml_node_struct* c = n->first_child; c; c = c->next_sibling)
+						if (step_push(ns, c, alloc) & once)
+							return;
+				}
 
 				break;
 			}
@@ -11127,13 +11218,20 @@ PUGI_IMPL_NS_BEGIN
 				return false;
 			}
 
+			case ast_opt_select_attribute:
+			{
+				xml_attribute attr = c.n.node().attribute(_data.nodetest);
+
+				return !attr.empty();
+			}
+
 			case ast_opt_compare_attribute:
 			{
 				const char_t* value = (_right->_type == ast_string_constant) ? _right->_data.string : _right->_data.variable->get_string();
 
 				xml_attribute attr = c.n.node().attribute(_left->_data.nodetest);
 
-				return attr && strequal(attr.value(), value) && is_xpath_attribute(attr.name());
+				return attr && strequal(attr.value(), value);
 			}
 
 			case ast_variable:
@@ -11273,6 +11371,13 @@ PUGI_IMPL_NS_BEGIN
 
 			case ast_func_round:
 				return round_nearest_nzero(_left->eval_number(c, stack));
+
+			case ast_opt_select_attribute:
+			{
+				xml_attribute attr = c.n.node().attribute(_data.nodetest);
+
+				return attr ? convert_string_to_number(attr.value()) : gen_nan();
+			}
 
 			case ast_variable:
 			{
@@ -11552,6 +11657,13 @@ PUGI_IMPL_NS_BEGIN
 				char_t* end = translate_table(begin, _data.table);
 
 				return xpath_string::from_heap_preallocated(begin, end);
+			}
+
+			case ast_opt_select_attribute:
+			{
+				xml_attribute attr = c.n.node().attribute(_data.nodetest);
+
+				return attr ? xpath_string::from_const(attr.value()) : xpath_string();
 			}
 
 			case ast_variable:
@@ -11878,11 +11990,21 @@ PUGI_IMPL_NS_BEGIN
 				assert(!_right); // root step can't have any predicates
 
 				xpath_node_set_raw ns;
-
 				ns.set_type(xpath_node_set::type_sorted);
 
 				if (c.n.node()) ns.push_back(c.n.node().root(), stack.result);
 				else if (c.n.attribute()) ns.push_back(c.n.parent().root(), stack.result);
+
+				return ns;
+			}
+
+			case ast_opt_select_attribute:
+			{
+				xpath_node_set_raw ns;
+				ns.set_type(xpath_node_set::type_sorted);
+
+				xml_attribute attr = c.n.node().attribute(_data.nodetest);
+				if (attr) ns.push_back(xpath_node(attr, c.n.node()), stack.result);
 
 				return ns;
 			}
@@ -11985,11 +12107,17 @@ PUGI_IMPL_NS_BEGIN
 				}
 			}
 
-			// Use optimized path for @attr = 'value' or @attr = $value
+			// Use optimized path for simple attribute selection (@attr)
+			// coverity[mixed_enums]
+			if (_type == ast_step && _axis == axis_attribute && _test == nodetest_name && !_left && !_right && is_xpath_attribute(_data.nodetest))
+			{
+				_type = ast_opt_select_attribute;
+			}
+
+			// Use optimized path for @attr = 'value' or @attr = $value (relies on attribute selection optimization for matching)
 			if (_type == ast_op_equal &&
 				_left && _right && // workaround for clang static analyzer and Coverity (_left and _right are never null for ast_op_equal)
-                // coverity[mixed_enums]
-				_left->_type == ast_step && _left->_axis == axis_attribute && _left->_test == nodetest_name && !_left->_left && !_left->_right &&
+				_left->_type == ast_opt_select_attribute &&
 				(_right->_type == ast_string_constant || (_right->_type == ast_variable && _right->_rettype == xpath_type_string)))
 			{
 				_type = ast_opt_compare_attribute;

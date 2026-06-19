@@ -1,5 +1,5 @@
 /**
- * pugixml parser - version 1.15
+ * pugixml parser - version 1.16
  * --------------------------------------------------------
  * Report bugs and download new versions at https://pugixml.org/
  *

@@ -1,5 +1,5 @@
 /**
- * pugixml parser - version 1.15
+ * pugixml parser - version 1.16
  * --------------------------------------------------------
  * Report bugs and download new versions at https://pugixml.org/
  *
@@ -284,7 +284,7 @@ PUGI_IMPL_NS_BEGIN
 	}
 #endif
 
-	// Compare lhs with [rhs_begin, rhs_end)
+	// Compare lhs with [rhs, rhs + count)
 	PUGI_IMPL_FN bool strequalrange(const char_t* lhs, const char_t* rhs, size_t count)
 	{
 		for (size_t i = 0; i < count; ++i)
@@ -2008,7 +2008,7 @@ PUGI_IMPL_NS_BEGIN
 	#define PUGI_IMPL_SCANCHARTYPE(ct) do { while (offset < size && PUGI_IMPL_IS_CHARTYPE(data[offset], ct)) offset++; } while (0)
 
 		// check if we have a non-empty XML declaration
-		if (size < 6 || !((data[0] == '<') & (data[1] == '?') & (data[2] == 'x') & (data[3] == 'm') & (data[4] == 'l') && PUGI_IMPL_IS_CHARTYPE(data[5], ct_space)))
+		if (size < 6 || !(((data[0] == '<') & (data[1] == '?') & (data[2] == 'x') & (data[3] == 'm') & (data[4] == 'l')) && PUGI_IMPL_IS_CHARTYPE(data[5], ct_space)))
 			return false;
 
 		// scan XML declaration until the encoding field
@@ -2200,7 +2200,7 @@ PUGI_IMPL_NS_BEGIN
 		char_t* buffer = static_cast<char_t*>(xml_memory::allocate((length + 1) * sizeof(char_t)));
 		if (!buffer) return false;
 
-		// second pass: convert utf16 input to wchar_t
+		// second pass: convert input to wchar_t
 		wchar_writer::value_type obegin = reinterpret_cast<wchar_writer::value_type>(buffer);
 		wchar_writer::value_type oend = D::process(data, data_length, obegin, wchar_writer());
 
@@ -2270,7 +2270,7 @@ PUGI_IMPL_NS_BEGIN
 		char_t* buffer = static_cast<char_t*>(xml_memory::allocate((length + 1) * sizeof(char_t)));
 		if (!buffer) return false;
 
-		// second pass: convert utf16 input to utf8
+		// second pass: convert input to utf8
 		uint8_t* obegin = reinterpret_cast<uint8_t*>(buffer);
 		uint8_t* oend = D::process(data, data_length, obegin, utf8_writer());
 
@@ -4854,7 +4854,12 @@ PUGI_IMPL_NS_BEGIN
 		auto_deleter<void> contents_guard(own ? contents : NULL, xml_memory::deallocate);
 
 		// early-out for empty documents to avoid buffer allocation overhead
-		if (size == 0) return make_parse_result((options & parse_fragment) ? status_ok : status_no_document_element);
+		if (size == 0)
+		{
+			xml_parse_result result = make_parse_result((options & parse_fragment) ? status_ok : status_no_document_element);
+			result.encoding = buffer_encoding;
+			return result;
+		}
 
 		// get private buffer
 		char_t* buffer = NULL;
@@ -6255,6 +6260,22 @@ namespace pugi
 	}
 #endif
 
+	PUGI_IMPL_FN xml_attribute xml_node::ensure_attribute(const char_t* name_)
+	{
+		xml_attribute result = attribute(name_);
+
+		return result ? result : append_attribute(name_);
+	}
+
+#ifdef PUGIXML_HAS_STRING_VIEW
+	PUGI_IMPL_FN xml_attribute xml_node::ensure_attribute(string_view_t name_)
+	{
+		xml_attribute result = attribute(name_);
+
+		return result ? result : append_attribute(name_);
+	}
+#endif
+
 	PUGI_IMPL_FN xml_attribute xml_node::append_copy(const xml_attribute& proto)
 	{
 		if (!proto) return xml_attribute();
@@ -6466,6 +6487,22 @@ namespace pugi
 		result.set_name(name_);
 
 		return result;
+	}
+#endif
+
+	PUGI_IMPL_FN xml_node xml_node::ensure_child(const char_t* name_)
+	{
+		xml_node result = child(name_);
+
+		return result ? result : append_child(name_);
+	}
+
+#ifdef PUGIXML_HAS_STRING_VIEW
+	PUGI_IMPL_FN xml_node xml_node::ensure_child(string_view_t name_)
+	{
+		xml_node result = child(name_);
+
+		return result ? result : append_child(name_);
 	}
 #endif
 
@@ -8056,6 +8093,8 @@ PUGI_IMPL_NS_BEGIN
 
 	template <typename I, typename Pred> PUGI_IMPL_FN I min_element(I begin, I end, const Pred& pred)
 	{
+		assert(begin != end);
+
 		I result = begin;
 
 		for (I it = begin + 1; it != end; ++it)
@@ -8147,7 +8186,7 @@ PUGI_IMPL_NS_BEGIN
 				swap(*lt, *--gt);
 		}
 
-		// we now have just 4 groups: = < >; move equal elements to the middle
+		// we now have just 3 groups: = < >; move equal elements to the middle
 		T* eqbeg = gt;
 
 		for (T* it = begin; it != eq; ++it)
@@ -9472,7 +9511,7 @@ PUGI_IMPL_NS_BEGIN
 		size_t length = strlength(name);
 		if (length == 0) return NULL; // empty variable names are invalid
 
-		// $$ we can't use offsetof(T, name) because T is non-POD, so we just allocate additional length characters
+		// we can't use offsetof(T, name) because T is non-POD, so we just allocate additional length characters
 		void* memory = xml_memory::allocate(sizeof(T) + length * sizeof(char_t));
 		if (!memory) return NULL;
 
